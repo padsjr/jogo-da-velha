@@ -1,0 +1,3 @@
+@echo off
+echo Iniciando Jogador 2...
+mvn exec:java -Dexec.mainClass="jogodavelha.jogador.Jogador" -Dexec.args="Jogador2"

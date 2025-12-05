@@ -1,0 +1,5 @@
+jogodavelha\modelo\Mensagem.class
+jogodavelha\util\KafkaConfig.class
+jogodavelha\modelo\Tabuleiro.class
+jogodavelha\servidor\ServidorJogo.class
+jogodavelha\jogador\Jogador.class

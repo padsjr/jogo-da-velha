@@ -1,0 +1,3 @@
+@echo off
+echo Iniciando Servidor do Jogo da Velha...
+mvn exec:java -Dexec.mainClass="jogodavelha.servidor.ServidorJogo"
