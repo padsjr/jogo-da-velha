@@ -1,10 +1,8 @@
 package jogodavelha.modelo;
 
-/**
- * Classe que representa uma mensagem trocada via Kafka
- */
+
 public class Mensagem {
-    private String tipo; // CONECTAR, JOGADA, ESTADO, FIM
+    private String tipo; 
     private String jogadorId;
     private int linha;
     private int coluna;
@@ -19,7 +17,6 @@ public class Mensagem {
         this.jogadorId = jogadorId;
     }
 
-    // Getters e Setters
     public String getTipo() {
         return tipo;
     }

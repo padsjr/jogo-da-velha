@@ -1,8 +1,5 @@
 package jogodavelha.modelo;
 
-/**
- * Classe que representa o tabuleiro do jogo da velha
- */
 public class Tabuleiro {
     private char[][] grade;
     private static final int TAMANHO = 3;
@@ -32,21 +29,18 @@ public class Tabuleiro {
     }
 
     public synchronized char verificarVencedor() {
-        // Verificar linhas
         for (int i = 0; i < TAMANHO; i++) {
             if (grade[i][0] != '-' && grade[i][0] == grade[i][1] && grade[i][1] == grade[i][2]) {
                 return grade[i][0];
             }
         }
 
-        // Verificar colunas
         for (int j = 0; j < TAMANHO; j++) {
             if (grade[0][j] != '-' && grade[0][j] == grade[1][j] && grade[1][j] == grade[2][j]) {
                 return grade[0][j];
             }
         }
 
-        // Verificar diagonais
         if (grade[0][0] != '-' && grade[0][0] == grade[1][1] && grade[1][1] == grade[2][2]) {
             return grade[0][0];
         }

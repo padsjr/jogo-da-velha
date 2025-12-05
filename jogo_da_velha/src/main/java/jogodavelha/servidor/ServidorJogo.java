@@ -18,10 +18,6 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Servidor que coordena o jogo da velha usando Kafka
- * Usa threads para processar mensagens de múltiplos jogadores
- */
 public class ServidorJogo {
     private Tabuleiro tabuleiro;
     private KafkaConsumer<String, String> consumer;
@@ -42,7 +38,7 @@ public class ServidorJogo {
     }
 
     private void configurarKafka() {
-        // Configurar Consumer
+
         Properties consumerProps = new Properties();
         consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaConfig.BOOTSTRAP_SERVERS);
         consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, KafkaConfig.GROUP_ID_SERVIDOR);
@@ -53,7 +49,6 @@ public class ServidorJogo {
         consumer = new KafkaConsumer<>(consumerProps);
         consumer.subscribe(Collections.singletonList(KafkaConfig.TOPICO_JOGADAS));
 
-        // Configurar Producer
         Properties producerProps = new Properties();
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaConfig.BOOTSTRAP_SERVERS);
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
@@ -67,7 +62,6 @@ public class ServidorJogo {
     public void iniciar() {
         System.out.println("[SERVIDOR] Servidor iniciado. Aguardando jogadores...");
         
-        // Thread para processar mensagens
         Thread processadorThread = new Thread(this::processarMensagens);
         processadorThread.start();
 
@@ -89,7 +83,6 @@ public class ServidorJogo {
                     
                     System.out.println("[SERVIDOR] Mensagem recebida: " + mensagem);
                     
-                    // Processar em thread separada para não bloquear
                     Thread handlerThread = new Thread(() -> tratarMensagem(mensagem));
                     handlerThread.start();
                 }
@@ -116,7 +109,7 @@ public class ServidorJogo {
 
     private void conectarJogador(String jogadorId) {
         if (numeroJogadores >= 2) {
-            enviarMensagem(jogadorId, "ERRO", "Jogo já está cheio!");
+            enviarMensagem(jogadorId, "ERRO", "Ja existem dois jogadores!");
             return;
         }
 
@@ -169,23 +162,19 @@ public class ServidorJogo {
                          " na posição (" + mensagem.getLinha() + "," + mensagem.getColuna() + ")");
         System.out.println(tabuleiro);
 
-        // Verificar vencedor
         char vencedor = tabuleiro.verificarVencedor();
         if (vencedor != '-') {
             finalizarJogo("Jogador '" + vencedor + "' venceu!");
             return;
         }
 
-        // Verificar empate
         if (tabuleiro.estaCompleto()) {
             finalizarJogo("Empate!");
             return;
         }
 
-        // Alternar jogador
         alternarJogador();
         
-        // Enviar estado atualizado para todos
         for (String jogadorId : jogadores.keySet()) {
             enviarEstadoJogo(jogadorId);
         }

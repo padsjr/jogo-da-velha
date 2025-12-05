@@ -18,10 +18,6 @@ import java.util.Collections;
 import java.util.Properties;
 import java.util.Scanner;
 
-/**
- * Cliente jogador que se conecta ao servidor via Kafka
- * Usa thread separada para receber mensagens do servidor
- */
 public class Jogador {
     private String jogadorId;
     private KafkaConsumer<String, String> consumer;
@@ -41,7 +37,7 @@ public class Jogador {
     }
 
     private void configurarKafka() {
-        // Configurar Consumer
+
         Properties consumerProps = new Properties();
         consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaConfig.BOOTSTRAP_SERVERS);
         consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, KafkaConfig.GROUP_ID_JOGADOR + jogadorId);
@@ -52,7 +48,6 @@ public class Jogador {
         consumer = new KafkaConsumer<>(consumerProps);
         consumer.subscribe(Collections.singletonList(KafkaConfig.TOPICO_ESTADO));
 
-        // Configurar Producer
         Properties producerProps = new Properties();
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaConfig.BOOTSTRAP_SERVERS);
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
@@ -70,12 +65,10 @@ public class Jogador {
         String json = gson.toJson(msg);
         producer.send(new ProducerRecord<>(KafkaConfig.TOPICO_JOGADAS, jogadorId, json));
 
-        // Thread para receber mensagens do servidor
         Thread receptorThread = new Thread(this::receberMensagens);
         receptorThread.setDaemon(true);
         receptorThread.start();
 
-        // Aguardar conexão
         try {
             Thread.sleep(1000);
         } catch (InterruptedException e) {
@@ -89,7 +82,6 @@ public class Jogador {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
                 
                 for (ConsumerRecord<String, String> record : records) {
-                    // Filtrar apenas mensagens para este jogador
                     if (!record.key().equals(jogadorId)) {
                         continue;
                     }
