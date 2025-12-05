@@ -43,7 +43,7 @@ public class Jogador {
         consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, KafkaConfig.GROUP_ID_JOGADOR + jogadorId);
         consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         consumer = new KafkaConsumer<>(consumerProps);
         consumer.subscribe(Collections.singletonList(KafkaConfig.TOPICO_ESTADO));
@@ -54,26 +54,25 @@ public class Jogador {
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 
         producer = new KafkaProducer<>(producerProps);
-
-        System.out.println("[" + jogadorId + "] Kafka configurado!");
     }
 
     public void conectar() {
-        System.out.println("[" + jogadorId + "] Conectando ao servidor...");
+        System.out.println("[" + jogadorId + "] Conectando ao servidor...\n");
         
-        Mensagem msg = new Mensagem("CONECTAR", jogadorId);
-        String json = gson.toJson(msg);
-        producer.send(new ProducerRecord<>(KafkaConfig.TOPICO_JOGADAS, jogadorId, json));
-
         Thread receptorThread = new Thread(this::receberMensagens);
         receptorThread.setDaemon(true);
         receptorThread.start();
 
         try {
-            Thread.sleep(1000);
+            Thread.sleep(2000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+
+        Mensagem msg = new Mensagem("CONECTAR", jogadorId);
+        String json = gson.toJson(msg);
+        producer.send(new ProducerRecord<>(KafkaConfig.TOPICO_JOGADAS, jogadorId, json));
+        producer.flush();
     }
 
     private void receberMensagens() {
@@ -82,7 +81,7 @@ public class Jogador {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
                 
                 for (ConsumerRecord<String, String> record : records) {
-                    if (!record.key().equals(jogadorId)) {
+                    if (record.key() != null && !record.key().equals(jogadorId)) {
                         continue;
                     }
 
@@ -101,27 +100,33 @@ public class Jogador {
         switch (mensagem.getTipo()) {
             case "CONECTADO":
                 conectado = true;
-                System.out.println("\n[" + jogadorId + "] " + mensagem.getConteudo());
+                System.out.println("========================================");
+                System.out.println(mensagem.getConteudo());
+                System.out.println("========================================\n");
                 break;
             case "AGUARDANDO":
-                System.out.println("\n[" + jogadorId + "] " + mensagem.getConteudo());
+                System.out.println(mensagem.getConteudo() + "\n");
                 break;
             case "ESTADO":
                 jogoAtivo = true;
+                System.out.println("\n========================================");
                 exibirTabuleiro(mensagem.getTabuleiro());
-                System.out.println("[" + jogadorId + "] " + mensagem.getConteudo());
+                System.out.println(">>> " + mensagem.getConteudo() + " <<<");
+                System.out.println("========================================\n");
                 break;
             case "ERRO":
-                System.out.println("\n[" + jogadorId + "] ERRO: " + mensagem.getConteudo());
+                System.out.println("\n❌ ERRO: " + mensagem.getConteudo() + "\n");
                 break;
             case "FIM":
                 jogoAtivo = false;
+                System.out.println("\n========================================");
+                System.out.println("         JOGO FINALIZADO!");
+                System.out.println("========================================");
                 exibirTabuleiro(mensagem.getTabuleiro());
-                System.out.println("\n[" + jogadorId + "] JOGO FINALIZADO: " + mensagem.getConteudo());
-                System.out.println("[" + jogadorId + "] Pressione Enter para sair...");
+                System.out.println(">>> " + mensagem.getConteudo() + " <<<");
+                System.out.println("========================================");
+                System.out.println("Pressione Ctrl + C para sair...\n");
                 break;
-            default:
-                System.out.println("[" + jogadorId + "] Mensagem desconhecida: " + mensagem.getTipo());
         }
     }
 
@@ -142,8 +147,8 @@ public class Jogador {
     }
 
     public void jogar() {
-        System.out.println("[" + jogadorId + "] Digite suas jogadas no formato: linha coluna (ex: 0 1)");
-        System.out.println("[" + jogadorId + "] Digite 'sair' para encerrar\n");
+        System.out.println("Digite suas jogadas no formato: linha coluna (ex: 0 1)");
+        System.out.println("Pressione Ctrl + C para encerrar\n");
 
         while (true) {
             try {
@@ -159,7 +164,7 @@ public class Jogador {
 
                 String[] partes = entrada.split(" ");
                 if (partes.length != 2) {
-                    System.out.println("[" + jogadorId + "] Formato inválido! Use: linha coluna");
+                    System.out.println("Formato inválido! Use: linha coluna");
                     continue;
                 }
 
@@ -169,9 +174,9 @@ public class Jogador {
                 enviarJogada(linha, coluna);
 
             } catch (NumberFormatException e) {
-                System.out.println("[" + jogadorId + "] Digite números válidos!");
+                System.out.println("Digite números válidos!");
             } catch (Exception e) {
-                System.err.println("[" + jogadorId + "] Erro: " + e.getMessage());
+                System.err.println("Erro: " + e.getMessage());
             }
         }
 
@@ -185,15 +190,13 @@ public class Jogador {
 
         String json = gson.toJson(msg);
         producer.send(new ProducerRecord<>(KafkaConfig.TOPICO_JOGADAS, jogadorId, json));
-        
-        System.out.println("[" + jogadorId + "] Jogada enviada: (" + linha + "," + coluna + ")");
     }
 
     private void fechar() {
         if (consumer != null) consumer.close();
         if (producer != null) producer.close();
         if (scanner != null) scanner.close();
-        System.out.println("[" + jogadorId + "] Desconectado.");
+        System.out.println("Desconectado.");
     }
 
     public static void main(String[] args) {

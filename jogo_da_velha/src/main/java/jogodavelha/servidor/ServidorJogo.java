@@ -44,7 +44,7 @@ public class ServidorJogo {
         consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, KafkaConfig.GROUP_ID_SERVIDOR);
         consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         consumer = new KafkaConsumer<>(consumerProps);
         consumer.subscribe(Collections.singletonList(KafkaConfig.TOPICO_JOGADAS));
@@ -55,8 +55,6 @@ public class ServidorJogo {
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 
         producer = new KafkaProducer<>(producerProps);
-
-        System.out.println("[SERVIDOR] Kafka configurado com sucesso!");
     }
 
     public void iniciar() {
@@ -80,8 +78,6 @@ public class ServidorJogo {
                 for (ConsumerRecord<String, String> record : records) {
                     String mensagemJson = record.value();
                     Mensagem mensagem = gson.fromJson(mensagemJson, Mensagem.class);
-                    
-                    System.out.println("[SERVIDOR] Mensagem recebida: " + mensagem);
                     
                     Thread handlerThread = new Thread(() -> tratarMensagem(mensagem));
                     handlerThread.start();
@@ -117,7 +113,7 @@ public class ServidorJogo {
         jogadores.put(jogadorId, simbolo);
         numeroJogadores++;
 
-        System.out.println("[SERVIDOR] Jogador " + jogadorId + " conectado como '" + simbolo + "'");
+        System.out.println("[SERVIDOR] Jogador " + jogadorId + " conectado como '" + simbolo + "' (" + numeroJogadores + "/2)");
         enviarMensagem(jogadorId, "CONECTADO", "Você é o jogador '" + simbolo + "'");
 
         if (numeroJogadores == 2) {
@@ -131,7 +127,9 @@ public class ServidorJogo {
         jogoAtivo = true;
         jogadorAtual = obterPrimeiroJogador();
         
-        System.out.println("[SERVIDOR] Jogo iniciado!");
+        System.out.println("\n========================================");
+        System.out.println("[SERVIDOR] JOGO INICIADO!");
+        System.out.println("========================================");
         System.out.println(tabuleiro);
         
         for (String jogadorId : jogadores.keySet()) {
@@ -200,6 +198,7 @@ public class ServidorJogo {
         
         String json = gson.toJson(msg);
         producer.send(new ProducerRecord<>(KafkaConfig.TOPICO_ESTADO, jogadorId, json));
+        producer.flush();
     }
 
     private void enviarMensagem(String jogadorId, String tipo, String conteudo) {
@@ -208,6 +207,7 @@ public class ServidorJogo {
         
         String json = gson.toJson(msg);
         producer.send(new ProducerRecord<>(KafkaConfig.TOPICO_ESTADO, jogadorId, json));
+        producer.flush();
     }
 
     private void finalizarJogo(String resultado) {
